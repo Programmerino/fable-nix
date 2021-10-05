@@ -12,17 +12,20 @@
 , autoPatchelfHook
 , patchelf
 , glibcLocales
+, makeWrapper
 }:
 
 { name ? "${args'.pname}-${args'.version}"
 , version
 , buildInputs ? []
 , nativeBuildInputs ? []
+, runtimeDependencies ? []
 , passthru ? {}
 , patches ? []
 , meta ? {}
+, project ? ""
 
-, binaryName ? name
+, binaryFiles ? [name]
 , sdk
 , system
 , nugetHostList ? [ "https://api.nuget.org/v3-flatcontainer/" ]
@@ -41,16 +44,10 @@ let
     "nugetSha256"
   ];
 
-  rpath = lib.makeLibraryPath (buildInputs ++ [
-    stdenv.cc.cc
-    icu
-    openssl
-  ]);
-  dynamicLinker = stdenv.cc.bintools.dynamicLinker;
-
   cases = { "x86_64-linux" = "linux-x64"; "aarch64-linux" = "linux-arm64";};
 
   target = cases."${system}";
+  arrayToShell = (a: toString (map (lib.escape (lib.stringToCharacters "\\ ';$`()|<>\t") ) a));
 
   nugetPackages-unpatched = stdenv.mkDerivation {
     name = "${name}-nuget-pkgs-unpatched";
@@ -86,12 +83,15 @@ let
 
 
   package = stdenv.mkDerivation (args // {
-    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl ];
+    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper ];
+    runtimeDependencies = runtimeDependencies ++ [ icu.out ];
 
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
     CLR_OPENSSL_VERSION_OVERRIDE=1.1;
     DOTNET_CLI_TELEMETRY_OPTOUT=1;
     LOCALE_ARCHIVE="${glibcLocales}/lib/locale/locale-archive";
+    noAuditTmpdir = true;
+    preDistPhases = "rpathFix";
 
     buildPhase = args.buildPhase or ''
       export HOME="$(mktemp -d)"
@@ -101,7 +101,7 @@ let
 
       autoPatchelf $HOME
 
-      dotnet publish --nologo --self-contained \
+      dotnet publish ${project} --nologo --self-contained \
         -c Release -r ${target} -o out \
         --source ${depsWithRuntime} \
         --no-restore
@@ -111,16 +111,30 @@ let
       runHook preInstall
       mkdir -p $out/bin
       cp -r ./out/* $out
-      ln -s $out/${binaryName} $out/bin/${binaryName}
+      cd $out
+      for binaryPattern in ${arrayToShell binaryFiles} ''${binaryFilesArray[@]}
+      do
+          for bin in ./$binaryPattern
+          do
+            [ -f "$bin" ] || continue
+            ln -s $out/$bin $out/bin/$bin
+          done
+      done
       runHook postInstall
     '';
 
-    postFixup = args.postFixup or ''
-      patchelf --set-interpreter "${dynamicLinker}" \
-        --set-rpath '$ORIGIN:${rpath}' $out/${binaryName}
+      rpathFix = ''
+        cd $out
+        find . ! -name '*.dll' ! -name '*.so' ! -name '*.xml' ! -name '*.a' -type f -executable -print0 | while read -d $'\0' file
+        do
+          if output=$(patchelf --print-rpath $file 2>/dev/null); then
+              wrapProgram "$out/$file" --prefix LD_LIBRARY_PATH : "$output"
+          else
+            echo $file was not a valid ELF file
+          fi
+        done
 
-      find $out -type f -name "*.so" -exec \
-        patchelf --set-rpath '$ORIGIN:${rpath}' {} ';'    
-    '';
+      '';
+
   });
 in package

@@ -1,5 +1,5 @@
 # dotnet-nix
-Based heavily on the work of [\@Elyhaka](https://gist.github.com/Elyhaka/0f0e3afe488100487ada6a2a8bef78a4), and retrofitted to work as a flake and to work with problematic libraries that need patchelf.
+Based heavily on the work of [\@Elyhaka](https://gist.github.com/Elyhaka/0f0e3afe488100487ada6a2a8bef78a4), and retrofitted to work as a flake and to work with problematic libraries that need patchelf and ICU support.
 
 *I'm new to Nix and flakes, so feel free to tell me if something is off*
 
@@ -41,6 +41,7 @@ This is edited from one of my projects where I use the library:
               inherit system;
               src = ./.;
               nugetSha256 = "sha256-cDAIZvRGVS+QoTub+XWAT9OwRaodMXSMFEJaIkJ2lHQ=";
+              binaryFiles = [ "myBinaryFileName" ];
           };
       }
     );
