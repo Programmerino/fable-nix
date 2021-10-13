@@ -40,12 +40,15 @@ This is edited from one of my projects where I use the library:
               inherit sdk;
               inherit system;
               src = ./.;
+              lockFile = ./packages.lock.json;
+              configFile = ./nuget.config; # optional
+
               nugetSha256 = "sha256-cDAIZvRGVS+QoTub+XWAT9OwRaodMXSMFEJaIkJ2lHQ=";
-              binaryFiles = [ "myBinaryFileName" ];
+              binaryFiles = [ "myBinaryFileName" ]; # name of project is included by default
           };
       }
     );
 }
 ```
 
-In order to use this, you must run `dotnet restore --use-lock-file` to generate the lock file necessary for deterministic builds whenever you change dependencies for you project (and the first time). Whenever you change your dependencies, you must change the `nugetSha256` to something slightly different, run a build and find out what the real hash is supposed to be.
+In order to use this, you must run ```dotnet restore -f --use-lock-file --force-evaluate``` to generate the lock file necessary for deterministic builds whenever you change dependencies for you project (and the first time). Depending on the projects you reference, you may need ```dotnet restore -r {RUNTIMEID} -f --use-lock-file --force-evaluate```. Whenever your Nuget config is changed or the lock file changes, you will need to replace ```nugetSha256``` with the hash specified while running ```nix build```.

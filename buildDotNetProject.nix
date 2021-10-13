@@ -13,6 +13,10 @@
 , patchelf
 , glibcLocales
 , makeWrapper
+, gcc-unwrapped
+, zlib
+, tlf
+, libkrb5
 }:
 
 { name ? "${args'.pname}-${args'.version}"
@@ -24,6 +28,8 @@
 , patches ? []
 , meta ? {}
 , project ? ""
+, lockFile
+, configFile ? ""
 
 , binaryFiles ? [name]
 , sdk
@@ -48,9 +54,10 @@ let
 
   target = cases."${system}";
   arrayToShell = (a: toString (map (lib.escape (lib.stringToCharacters "\\ ';$`()|<>\t") ) a));
+  configArg = (if configFile == "" then "" else " --configfile ${configFile}");
 
   nugetPackages-unpatched = stdenv.mkDerivation {
-    name = "${name}-nuget-pkgs-unpatched";
+    name = "${name}-${builtins.hashFile "sha1" lockFile}-${builtins.hashString "sha1" configArg}-nuget-pkgs-unpatched";
 
     outputHashAlgo = "sha256";
     outputHash = nugetSha256;
@@ -72,7 +79,7 @@ let
       export HOME=$(mktemp -d)
       cp -R ${args.src} $HOME/tmp-sln
       chmod -R +rw $HOME/tmp-sln
-      dotnet restore -r ${target} --locked-mode --no-cache --packages $out $HOME/tmp-sln
+      dotnet restore -r ${target} --locked-mode --use-lock-file${configArg} --lock-file-path "${lockFile}" --no-cache --nologo --packages $out $HOME/tmp-sln
     '';
   };
 
@@ -83,7 +90,7 @@ let
 
 
   package = stdenv.mkDerivation (args // {
-    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper ];
+    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 ];
     runtimeDependencies = runtimeDependencies ++ [ icu.out ];
 
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
@@ -92,12 +99,13 @@ let
     LOCALE_ARCHIVE="${glibcLocales}/lib/locale/locale-archive";
     noAuditTmpdir = true;
     preDistPhases = "rpathFix";
+    autoPatchelfIgnoreMissingDeps=true;
 
     buildPhase = args.buildPhase or ''
       export HOME="$(mktemp -d)"
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${openssl.out}/lib"
 
-      dotnet restore -r ${target} --source ${depsWithRuntime} --nologo
+      dotnet restore -r ${target} --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}"
 
       autoPatchelf $HOME
 
