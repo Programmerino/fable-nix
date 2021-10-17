@@ -92,6 +92,8 @@ let
   package = stdenv.mkDerivation (args // {
     nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 ];
     runtimeDependencies = runtimeDependencies ++ [ icu.out ];
+    
+    outputs = [ "out" "nuget" ];
 
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
     CLR_OPENSSL_VERSION_OVERRIDE=1.1;
@@ -104,15 +106,22 @@ let
     buildPhase = args.buildPhase or ''
       export HOME="$(mktemp -d)"
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${openssl.out}/lib"
+      mkdir -p $nuget
 
-      dotnet restore -r ${target} --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}"
+      dotnet restore -r ${target} --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}" ${project}
 
       autoPatchelf $HOME
 
-      dotnet publish ${project} --nologo --self-contained \
+      dotnet publish --nologo --self-contained \
         -c Release -r ${target} -o out \
         --source ${depsWithRuntime} \
-        --no-restore
+        --no-restore ${project}
+        
+      ln -s $PWD/bin/Release/net5.0/${target}/* $PWD/bin/Release/net5.0 || true
+        
+      dotnet pack --no-build --no-restore -o $nuget --configuration Release --nologo --runtime ${target} ${project}
+      
+      autoPatchelf $nuget
     '';
 
     installPhase = args.installPhase or ''
