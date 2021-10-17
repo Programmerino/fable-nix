@@ -90,6 +90,8 @@ let
 
 
   package = stdenv.mkDerivation (args // {
+    inherit name;
+    inherit version;
     nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 ];
     runtimeDependencies = runtimeDependencies ++ [ icu.out ];
     

@@ -52,3 +52,9 @@ This is edited from one of my projects where I use the library:
 ```
 
 In order to use this, you must run ```dotnet restore -f --use-lock-file --force-evaluate``` to generate the lock file necessary for deterministic builds whenever you change dependencies for you project (and the first time). Depending on the projects you reference, you may need ```dotnet restore -r {RUNTIMEID} -f --use-lock-file --force-evaluate```. Whenever your Nuget config is changed or the lock file changes, you will need to replace ```nugetSha256``` with the hash specified while running ```nix build```.
+
+If you want to keep versioning and naming consistent with the project, you can use this in your `csproj`, `fsproj`, etc.:
+```xml
+<PackageId Condition="'$(name)' != ''">$(name)</PackageId>
+<Version Condition="'$(version)' != ''">$(version)</Version>
+```
