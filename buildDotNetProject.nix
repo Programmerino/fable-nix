@@ -21,6 +21,7 @@
 
 { name ? "${args'.pname}-${args'.version}"
 , version
+, library ? false
 , buildInputs ? []
 , nativeBuildInputs ? []
 , runtimeDependencies ? []
@@ -95,38 +96,36 @@ let
     nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 ];
     runtimeDependencies = runtimeDependencies ++ [ icu.out ];
     
-    outputs = [ "out" "nuget" ];
+    outputs = [ "out" ];
 
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
     CLR_OPENSSL_VERSION_OVERRIDE=1.1;
     DOTNET_CLI_TELEMETRY_OPTOUT=1;
     LOCALE_ARCHIVE="${glibcLocales}/lib/locale/locale-archive";
     noAuditTmpdir = true;
-    preDistPhases = "rpathFix";
+    preDistPhases = if library then "" else "rpathFix";
     autoPatchelfIgnoreMissingDeps=true;
 
-    buildPhase = args.buildPhase or ''
+    buildPhase = args.buildPhase or lib.strings.concatStrings [''
       export HOME="$(mktemp -d)"
       export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${openssl.out}/lib"
-      mkdir -p $nuget
 
       dotnet restore -r ${target} --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}" ${project}
 
       autoPatchelf $HOME
-
+    ''  (if library then ''
+      dotnet build --configuration Release --no-restore
+      ln -s $PWD/bin/Release/net5.0/${target}/* $PWD/bin/Release/net5.0 || true
+      dotnet pack --no-build --no-restore -o $out --configuration Release --nologo --runtime ${target} ${project}
+    '' else ''
+    
       dotnet publish --nologo --self-contained \
         -c Release -r ${target} -o out \
         --source ${depsWithRuntime} \
         --no-restore ${project}
-        
-      ln -s $PWD/bin/Release/net5.0/${target}/* $PWD/bin/Release/net5.0 || true
-        
-      dotnet pack --no-build --no-restore -o $nuget --configuration Release --nologo --runtime ${target} ${project}
-      
-      autoPatchelf $nuget
-    '';
+    '')];
 
-    installPhase = args.installPhase or ''
+    installPhase = args.installPhase or (if library then ''runHook preInstall; runHook postInstall ''  else ''
       runHook preInstall
       mkdir -p $out/bin
       cp -r ./out/* $out
@@ -140,9 +139,9 @@ let
           done
       done
       runHook postInstall
-    '';
+    '');
 
-      rpathFix = ''
+      rpathFix = (if library then '''' else ''
         cd $out
         find . ! -name '*.dll' ! -name '*.so' ! -name '*.xml' ! -name '*.a' -type f -executable -print0 | while read -d $'\0' file
         do
@@ -152,8 +151,7 @@ let
             echo $file was not a valid ELF file
           fi
         done
-
-      '';
+      '');
 
   });
 in package
