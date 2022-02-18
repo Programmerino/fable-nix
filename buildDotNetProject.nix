@@ -35,6 +35,7 @@
 , binaryFiles ? [name]
 , sdk
 , system
+, forceTarget ? ""
 , nugetHostList ? [ "https://api.nuget.org/v3-flatcontainer/" ]
 , nugetSha256
 
@@ -53,7 +54,7 @@ let
 
   cases = { "x86_64-linux" = "linux-x64"; "aarch64-linux" = "linux-arm64";};
 
-  target = cases."${system}";
+  target = (if forceTarget == "" then cases."${system}" else forceTarget);
   arrayToShell = (a: toString (map (lib.escape (lib.stringToCharacters "\\ ';$`()|<>\t") ) a));
   configArg = (if configFile == "" then "" else " --configfile ${configFile}");
 
