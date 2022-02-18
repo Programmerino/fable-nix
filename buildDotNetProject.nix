@@ -116,7 +116,7 @@ let
       autoPatchelf $HOME
     ''  (if library then ''
       dotnet build --configuration Release --no-restore
-      ln -s $PWD/bin/Release/net5.0/${target}/* $PWD/bin/Release/net5.0 || true
+      ln -s $PWD/bin/Release/net6.0/${target}/* $PWD/bin/Release/net6.0 || true
       dotnet pack --no-build --no-restore -o $out --configuration Release --nologo --runtime ${target} ${project}
     '' else ''
     
