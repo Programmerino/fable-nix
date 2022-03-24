@@ -17,11 +17,16 @@
 , zlib
 , tlf
 , libkrb5
+, nodejs
+, fable ? {}
 }:
 
 { name ? "${args'.pname}-${args'.version}"
 , version
 , library ? false
+, useFable ? false
+, fablePackage ? fable
+, nodePackage ? nodejs
 , buildInputs ? []
 , nativeBuildInputs ? []
 , runtimeDependencies ? []
@@ -65,7 +70,7 @@ let
     outputHash = nugetSha256;
     outputHashMode = "recursive";
 
-    nativeBuildInputs = [ sdk curl cacert unzip ];
+    nativeBuildInputs = [ sdk cacert ];
 
     dontFetch = true;
     dontUnpack = true;
@@ -76,7 +81,6 @@ let
     DOTNET_CLI_TELEMETRY_OPTOUT=1;
 
     installPhase = ''
-      set -e
       mkdir -p $out
       export HOME=$(mktemp -d)
       cp -R ${args.src} $HOME/tmp-sln
@@ -91,14 +95,47 @@ let
   };
 
 
+  fablePkg = stdenv.mkDerivation (args // {
+    inherit name;
+    inherit version;
+
+    nativeBuildInputs = nativeBuildInputs ++ [ sdk makeWrapper ];
+    DOTNET_CLI_TELEMETRY_OPTOUT=1;
+    dontFixup = true;
+    dontConfigure = true;
+    buildPhase = args.buildPhase or ''
+      export HOME=$(mktemp -d)
+      mkdir -p $out
+      dotnet restore --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}" ${project}
+      cp -r precompile/. $out || true
+      ${fablePackage}/bin/fable precompile ${project} -o $out
+    '';
+
+    installPhase = args.installPhase or (if library then ''runHook preInstall; runHook postInstall ''  else ''
+      runHook preInstall
+      mkdir -p $out/bin
+      cd $out
+      for binaryPattern in ${arrayToShell binaryFiles} ''${binaryFilesArray[@]}
+      do
+          for bin in ./$binaryPattern
+          do
+            [ -f "$bin" ] || continue
+            chmod +x $bin
+            sed -i '1 i #!${nodePackage}/bin/node' $bin
+            ln -s $out/$bin $out/bin/$(basename $bin .js)
+          done
+      done
+      runHook postInstall
+    '');
+
+  });
+
   package = stdenv.mkDerivation (args // {
     inherit name;
     inherit version;
     nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 ];
     runtimeDependencies = runtimeDependencies ++ [ icu.out ];
     
-    outputs = [ "out" ];
-
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
     CLR_OPENSSL_VERSION_OVERRIDE=1.1;
     DOTNET_CLI_TELEMETRY_OPTOUT=1;
@@ -155,4 +192,4 @@ let
       '');
 
   });
-in package
+in (if useFable then fablePkg else package)
