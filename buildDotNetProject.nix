@@ -103,17 +103,19 @@ let
     DOTNET_CLI_TELEMETRY_OPTOUT=1;
     dontFixup = true;
     dontConfigure = true;
-    buildPhase = args.buildPhase or ''
+    buildPhase = args.buildPhase or lib.strings.concatStrings [''
       runHook preBuild
 
       export HOME=$(mktemp -d)
       mkdir -p $out
       dotnet restore --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}" ${project}
+    '' (if library then ''
+      dotnet build --configuration Release --no-restore
+      dotnet pack --no-build --no-restore -o $out --configuration Release --nologo ${project}
+    '' else ''
       cp -r precompile/. $out || true
       ${fablePackage}/bin/fable precompile ${project} -o $out
-
-      runHook postBuild
-    '';
+    '') ''runHook postBuild'' ];
 
     installPhase = args.installPhase or (if library then ''runHook preInstall; runHook postInstall ''  else ''
       runHook preInstall
