@@ -85,7 +85,7 @@ let
       export HOME=$(mktemp -d)
       cp -R ${args.src} $HOME/tmp-sln
       chmod -R +rw $HOME/tmp-sln
-      dotnet restore -r ${target} --locked-mode --use-lock-file${configArg} --lock-file-path "${lockFile}" --no-cache --nologo --packages $out $HOME/tmp-sln
+      dotnet restore ${if useFable then "" else "-r ${target}"} --locked-mode --use-lock-file${configArg} --lock-file-path "${lockFile}" --no-cache --nologo --packages $out $HOME/tmp-sln
     '';
   };
 
@@ -104,11 +104,15 @@ let
     dontFixup = true;
     dontConfigure = true;
     buildPhase = args.buildPhase or ''
+      runHook preBuild
+
       export HOME=$(mktemp -d)
       mkdir -p $out
       dotnet restore --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}" ${project}
       cp -r precompile/. $out || true
       ${fablePackage}/bin/fable precompile ${project} -o $out
+
+      runHook postBuild
     '';
 
     installPhase = args.installPhase or (if library then ''runHook preInstall; runHook postInstall ''  else ''
