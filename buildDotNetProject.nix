@@ -59,7 +59,7 @@ let
 
   cases = { "x86_64-linux" = "linux-x64"; "aarch64-linux" = "linux-arm64";};
 
-  target = (if forceTarget == "" then cases."${system}" else forceTarget);
+  target = (if forceTarget == "" && !isFable then cases."${system}" else forceTarget);
   arrayToShell = (a: toString (map (lib.escape (lib.stringToCharacters "\\ ';$`()|<>\t") ) a));
   configArg = (if configFile == "" then "" else " --configfile ${configFile}");
 
@@ -85,7 +85,8 @@ let
       export HOME=$(mktemp -d)
       cp -R ${args.src} $HOME/tmp-sln
       chmod -R +rw $HOME/tmp-sln
-      dotnet restore ${if useFable then "" else "-r ${target}"} --locked-mode --use-lock-file${configArg} --lock-file-path "${lockFile}" --no-cache --nologo --packages $out $HOME/tmp-sln
+      cd $HOME/tmp-sln
+      dotnet restore ${project} ${if useFable then "" else "-r ${target}"} --locked-mode --use-lock-file${configArg} --lock-file-path "${lockFile}" --no-cache --packages $out --nologo
     '';
   };
 
@@ -110,7 +111,7 @@ let
       mkdir -p $out
       dotnet restore --source ${depsWithRuntime} --nologo --locked-mode${configArg}  --use-lock-file --lock-file-path "${lockFile}" ${project}
     '' (if library then ''
-      dotnet build --configuration Release --no-restore
+      dotnet build --configuration Release --no-restore ${project}
       dotnet pack --no-build --no-restore -o $out --configuration Release --nologo ${project}
     '' else ''
       cp -r precompile/. $out || true
