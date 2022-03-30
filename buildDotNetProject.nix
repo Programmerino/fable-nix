@@ -141,8 +141,8 @@ let
   package = stdenv.mkDerivation (args // {
     inherit name;
     inherit version;
-    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 lttng-ust_2_12 ];
-    runtimeDependencies = runtimeDependencies ++ [ icu.out ];
+    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl.out makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 lttng-ust_2_12 ];
+    runtimeDependencies = runtimeDependencies ++ [ icu.out openssl.out ];
     
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
     CLR_OPENSSL_VERSION_OVERRIDE=1.1;
