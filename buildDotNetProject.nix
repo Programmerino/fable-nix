@@ -18,6 +18,7 @@
 , tlf
 , libkrb5
 , nodejs
+, lttng-ust_2_12
 , fable ? {}
 }:
 
@@ -140,7 +141,7 @@ let
   package = stdenv.mkDerivation (args // {
     inherit name;
     inherit version;
-    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 ];
+    nativeBuildInputs = nativeBuildInputs ++ [ sdk autoPatchelfHook openssl makeWrapper gcc-unwrapped.lib zlib tlf libkrb5 lttng-ust_2_12 ];
     runtimeDependencies = runtimeDependencies ++ [ icu.out ];
     
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1;
