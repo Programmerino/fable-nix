@@ -60,7 +60,7 @@ let
 
   cases = { "x86_64-linux" = "linux-x64"; "aarch64-linux" = "linux-arm64";};
 
-  target = (if forceTarget == "" && !isFable then cases."${system}" else forceTarget);
+  target = (if forceTarget == "" && !useFable then cases."${system}" else forceTarget);
   arrayToShell = (a: toString (map (lib.escape (lib.stringToCharacters "\\ ';$`()|<>\t") ) a));
   configArg = (if configFile == "" then "" else " --configfile ${configFile}");
 
