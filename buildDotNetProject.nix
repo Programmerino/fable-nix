@@ -58,7 +58,7 @@ let
     "nugetSha256"
   ];
 
-  cases = { "x86_64-linux" = "linux-x64"; "aarch64-linux" = "linux-arm64";};
+  cases = { "x86_64-linux" = "linux-x64"; "aarch64-linux" = "linux-arm64"; "x86_64-darwin" = "osx-x64";};
 
   target = (if forceTarget == "" && !useFable then cases."${system}" else forceTarget);
   arrayToShell = (a: toString (map (lib.escape (lib.stringToCharacters "\\ ';$`()|<>\t") ) a));
