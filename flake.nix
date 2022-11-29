@@ -1,17 +1,17 @@
 {
-  description = "Easily build dotnet projects with Nix";
+  description = "Easily build Fable projects with Nix";
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   inputs.nixpkgs.url = "github:nixos/nixpkgs";
 
-  inputs.fable.url = "github:Programmerino/fable.nix";
+  inputs.dotnet-tools.url = "github:Programmerino/dotnet-tools.nix";
 
   outputs = {
     self,
     nixpkgs,
     flake-utils,
-    fable,
+    dotnet-tools,
   }:
     flake-utils.lib.eachSystem ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"] (
       system: let
@@ -19,7 +19,7 @@
           inherit system;
         };
       in rec {
-        buildDotNetProject = pkgs.callPackage ./buildDotNetProject.nix {fable = fable.defaultPackage."${system}";};
+        buildFableProject = pkgs.callPackage ./buildFableProject.nix {fable = dotnet-tools.packages."${system}".fable;};
       }
     );
 }

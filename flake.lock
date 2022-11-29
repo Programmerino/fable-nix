@@ -1,21 +1,21 @@
 {
   "nodes": {
-    "fable": {
+    "dotnet-tools": {
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1648156436,
-        "narHash": "sha256-NYurw+dUMGpqXr0zdD42Auddtaz2LZ+QlSwVcarPCiI=",
+        "lastModified": 1668402567,
+        "narHash": "sha256-llq9my8jp0JboTwApO2ru5CMtO4E3zKm33QMOFrav6Q=",
         "owner": "Programmerino",
-        "repo": "fable.nix",
-        "rev": "aff2f905ef4fd4dddeded013d14e1c16468a783c",
+        "repo": "dotnet-tools.nix",
+        "rev": "956c011b2031d6fb29e0526f46d0938db00ba58f",
         "type": "github"
       },
       "original": {
         "owner": "Programmerino",
-        "repo": "fable.nix",
+        "repo": "dotnet-tools.nix",
         "type": "github"
       }
     },
@@ -80,7 +80,7 @@
     },
     "root": {
       "inputs": {
-        "fable": "fable",
+        "dotnet-tools": "dotnet-tools",
         "flake-utils": "flake-utils_2",
         "nixpkgs": "nixpkgs_2"
       }
